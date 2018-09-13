@@ -13,6 +13,11 @@ namespace constructive.pigeon
 def increasing (f : ℕ → ℕ) :=
   ∀ x y : ℕ, x < y → f x < f y
 
+def full (A : ℕ → Prop) (Y : (ℕ → ℕ) → ℕ) :=
+∀ f : ℕ → ℕ, increasing f → A (f (Y f))
+
+def almost_full (A : ℕ → Prop) := ∃ Y : (ℕ → ℕ) → ℕ, full A Y
+
 lemma compose_increasing (f g : ℕ → ℕ) :
   increasing f → increasing g → increasing (λ x, f (g x)) :=
     λ (hf : increasing f) (hg : increasing g) (x y : ℕ) (h : x < y),
@@ -31,9 +36,6 @@ begin
     rewrite hxz, exact (hf z),
     exact nat.lt_trans (ih hxz) (hf z),
 end
-
-def full (A : ℕ → Prop) (Y : (ℕ → ℕ) → ℕ) :=
-  ∀ f : ℕ → ℕ, increasing f → A (f (Y f))
 
 def enumerate (Y : (ℕ → ℕ) → ℕ) : ℕ → ℕ
   | 0 := Y (id)
@@ -91,8 +93,9 @@ def combine (YA YB : (ℕ → ℕ) -> ℕ) (f : ℕ → ℕ) :=
   enumerate (restrict YA f) ((restrict YB f) (enumerate (restrict YA f)))
 infix `⊙` : 50 := combine
 
-theorem pidgeon (A B : nat -> Prop) (YA YB : (nat -> nat) -> nat) :
-  full A YA → full B YB → full (A ∩ B) (YA ⊙ YB) :=
+theorem constr_pidgeon_with_wits (A B : nat -> Prop)
+  (YA YB : (nat -> nat) -> nat) :
+    full A YA → full B YB → full (A ∩ B) (YA ⊙ YB) :=
 begin
   intros YAfull YBfull f incrf,
   apply pre_pidgeon (A ∘ f) (B ∘ f) (restrict YA f) (restrict YB f);
@@ -101,6 +104,18 @@ begin
     apply YAfull (f∘g) <|> apply YBfull (f∘g),
     apply compose_increasing f g incrf incrg
   }
+end
+
+theorem constr_pigeon (A B : nat -> Prop) :
+  almost_full A → almost_full B → almost_full (A ∩ B) :=
+begin
+  intros afA afB,
+  cases afA with YA hYA,
+  cases afB with YB hYB,
+  unfold almost_full,
+  have h : full (A ∩ B) (YA ⊙ YB),
+    apply constr_pidgeon_with_wits A B YA YB hYA hYB,
+  apply exists.intro (YA⊙YB) h,
 end
 
 end constructive.pigeon
