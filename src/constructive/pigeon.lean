@@ -24,31 +24,25 @@ lemma compose_increasing (f g : ℕ → ℕ) :
       hf (g x) (g y) (hg x y h)
 
 lemma increasing_by_step (f : ℕ → ℕ) : (∀ n : ℕ, f n < f (n+1)) → increasing f :=
-begin
-  intros hf x y,
-  apply nat.rec_on y,
-    {
-      intro contr, apply absurd contr (nat.not_succ_le_zero x) },
-    intros z ih h,
-    have hxz : x = z ∨ x < z,
-      { apply nat.eq_or_lt_of_le (nat.le_of_lt_succ h) },
-    cases hxz,
-    rewrite hxz, exact (hf z),
-    exact nat.lt_trans (ih hxz) (hf z),
-end
+λ (hf : ∀ n : ℕ, f n < f (n+1)) (x y : ℕ),
+  nat.rec_on y
+    (λ (contr : x < 0), absurd contr (nat.not_succ_le_zero x))
+    (λ (z : ℕ) (ih : x < z → f x < f z) (h : x < nat.succ z),
+      or.cases_on (nat.eq_or_lt_of_le (nat.le_of_lt_succ h))
+        (λ hxz : x = z, hxz ▸ (hf x))
+        (λ (hxz : x < z), nat.lt_trans (ih hxz) (hf z)))
 
 def enumerate (Y : (ℕ → ℕ) → ℕ) : ℕ → ℕ
   | 0 := Y (id)
   | (n+1) := Y (λ m, m + (enumerate n) + 1) + (enumerate n) + 1
 
 lemma  increasing_enumerate (Y : (ℕ → ℕ) → ℕ) : increasing (enumerate Y) :=
-begin
-  intro x, apply increasing_by_step,
-  intro n,
-  unfold enumerate, simp,
-  apply nat.lt_add_of_pos_right,
-  rewrite nat.add_comm, apply nat.zero_lt_succ
-end
+λ x : ℕ,
+increasing_by_step (λ (x : ℕ), enumerate Y x)
+ (λ (n : ℕ),
+   nat.le_add_left
+     ((enumerate Y n)+1)
+     (Y (λ (m : ℕ), m + enumerate Y (nat.add n 0) + 1))) x
 
 variables A B : ℕ → Prop
 variables YA YB : (ℕ → ℕ)  → ℕ
@@ -56,33 +50,23 @@ variables YA YB : (ℕ → ℕ)  → ℕ
 def FYA (x n : ℕ) := n + nat.succ (enumerate YA x)
 
 lemma increasing_FYA : ∀ x : ℕ, increasing (FYA YA x) :=
-begin
-  intros x y z h,
-  apply nat.add_lt_add_right, exact h
-end
+λ (x : ℕ) (y z : ℕ) (h : y < z),
+  nat.add_lt_add_right h (nat.succ (enumerate YA x))
 
 lemma enumerate_YA : full A YA → ∀ x : ℕ, A (enumerate YA x) :=
-begin
-  intros fYA x,
-  cases x with,
-  { apply (fYA id), intros x y h, exact h },
-  { apply fYA (FYA YA x), apply increasing_FYA }
-end
+λ (fYA : full A YA) (x : ℕ),
+  nat.cases_on x
+    (fYA id (λ (x y : ℕ) (h : x < y), h))
+    (λ (x : ℕ), fYA (FYA YA x) (increasing_FYA YA x))
 
 lemma YB_enumerate_YA : full B YB -> B (enumerate YA (YB (enumerate YA))) :=
-begin
-  intro YBfull,
-  apply YBfull (enumerate YA) (increasing_enumerate YA)
-end
+λ YBfull : full B YB,
+  YBfull (enumerate YA) (increasing_enumerate YA)
 
 lemma pre_pidgeon : full A YA → full B YB →
   A (enumerate YA (YB (enumerate YA))) ∧ B (enumerate YA (YB (enumerate YA))) :=
-begin
-  intros YAfull YBfull,
-  split,
-    { apply enumerate_YA, exact YAfull },
-    { apply YB_enumerate_YA, exact YBfull }
-end
+λ (YAfull : full A YA) (YBfull : full B YB),
+  ⟨enumerate_YA A YA YAfull (YB (enumerate YA)), YB_enumerate_YA B YA YB YBfull⟩
 
 def inter (A B : ℕ -> Prop) (n : ℕ) := A n ∧ B n
 infix `∩` := inter
@@ -96,26 +80,22 @@ infix `⊙` : 50 := combine
 theorem constr_pidgeon_with_wits (A B : nat -> Prop)
   (YA YB : (nat -> nat) -> nat) :
     full A YA → full B YB → full (A ∩ B) (YA ⊙ YB) :=
-begin
-  intros YAfull YBfull f incrf,
-  apply pre_pidgeon (A ∘ f) (B ∘ f) (restrict YA f) (restrict YB f);
-  {
-    intros g incrg,
-    apply YAfull (f∘g) <|> apply YBfull (f∘g),
-    apply compose_increasing f g incrf incrg
-  }
-end
+λ (YAfull : full A YA) (YBfull : full B YB),
+    λ (f : ℕ → ℕ) (incrf : increasing f),
+       pre_pidgeon (A ∘ f) (B ∘ f) (restrict YA f) (restrict YB f)
+         (λ (g : ℕ → ℕ) (incrg : increasing g),
+           YAfull (f ∘ g) (compose_increasing f g incrf incrg))
+         (λ (g : ℕ → ℕ) (incrg : increasing g),
+           YBfull (f ∘ g) (compose_increasing f g incrf incrg))
 
 theorem constr_pigeon (A B : nat -> Prop) :
   almost_full A → almost_full B → almost_full (A ∩ B) :=
-begin
-  intros afA afB,
-  cases afA with YA hYA,
-  cases afB with YB hYB,
-  unfold almost_full,
-  have h : full (A ∩ B) (YA ⊙ YB),
-    apply constr_pidgeon_with_wits A B YA YB hYA hYB,
-  apply exists.intro (YA⊙YB) h,
-end
+λ (afA : almost_full A) (afB : almost_full B),
+  exists.elim afA
+    (λ (YA : (ℕ → ℕ) → ℕ) (hYA : full A YA),
+       exists.elim afB
+         (λ (YB : (ℕ → ℕ) → ℕ) (hYB : full B YB),
+              (exists.intro
+                (YA⊙YB) (constr_pidgeon_with_wits A B YA YB hYA hYB))))
 
 end constructive.pigeon
