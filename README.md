@@ -3,7 +3,7 @@
 This is a work-in-progress formalization of Ramsey Theory in
 [Lean](https://leanprover.github.io/).
 
-## Constructive :construction: Proofs
+## Constructive Proofs
 
 ### Pigeon Hole Principle
 
@@ -20,7 +20,7 @@ The constructive version of the infinite pidgeon hole principle was
 [proved in coq](https://github.com/coq-contribs/ramsey).
 An adaptation of this proof is given in `src/constructive/pigeon.lean`.
 
-## Classical :violin: Proofs
+## Classical Proofs
 
 ### Pigeon Hole Principle
 
