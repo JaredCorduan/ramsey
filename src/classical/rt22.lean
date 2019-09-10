@@ -24,7 +24,7 @@ structure bigNat (m : ℕ) :=
 (val : ℕ)
 (pf : m < val)
 
-def reds (f : ℕ → color) (H : set ℕ) := (λ n : ℕ, f n = red ∧ H n )
+def reds (f : ℕ → color) (H : set ℕ) := (λ n : ℕ, f n = red ∧ n ∈ H )
 def blues (f : ℕ → color) (H : set ℕ) := (λ n : ℕ, f n = blue ∧ H n)
 
 structure Inf :=
@@ -68,7 +68,8 @@ infinite (reds f H) ∨ infinite (blues f H) :=
 begin
   rw or_iff_not_imp_left,
   intros redFin,
-  cases (neg_pi2 redFin) with w Hw, simp at Hw,
+  simp [infinite, not_forall, not_exists] at redFin,
+  cases redFin with w Hw,
   intros x,
   have x_lt_a : x < x + w + 1, exact lt_succ x w,
   have w_lt_a : w < x + w + 1,
@@ -113,7 +114,7 @@ def monochromatic (f : ℕ → color) (H : Inf) :=
   ∃ c : color, ∀ n, n ∈ H → f n = c
 
 structure condition (f : [ℕ]² → color) extends Inf := (n : ℕ)
-instance (f : [ℕ]² → color) : has_coe (condition f) Inf := ⟨λ c, ⟨c.s, c.pf⟩⟩
+instance (f : [ℕ]² → color) : has_coe (condition f) Inf := ⟨λ c, c.to_Inf⟩
 
 def ext {f : [ℕ]² → color} (p q: condition f) :=
   p.n < q.n ∧ q.n ∈ p.s ∧ q.s ⊆ p.s ∧ monochromatic (project f q.n) q
@@ -174,7 +175,7 @@ lemma silly (f : [ℕ]² → color) : ∀ p : condition f,
   p = {to_Inf := ↑p, n := p.n} :=
 begin
   intro p,
-  cases p, simp, sorry,
+  cases p, refl,
 end
 
 lemma iter_incr
