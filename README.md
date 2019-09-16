@@ -28,3 +28,8 @@ In `src/classical/pigeon.lean` it is shown that a subset A of ℕ is
 cofinite if and only if it is almost full.
 The usual pigeon hole principle is then proved by way of the
 constructive version.
+
+### Ramsey's theorem for pairs in two colors.
+
+The infinite Ramsey's theorem for pairs, in two colorls, is proved
+in `src/classical/rt22.lean`.
